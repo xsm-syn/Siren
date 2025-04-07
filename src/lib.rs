@@ -163,7 +163,7 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
     .join("\n");
 
     let html = format!(
-r#"<!DOCTYPE html>
+    r#"<!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
@@ -335,13 +335,13 @@ r#"<!DOCTYPE html>
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    const drops = Array.from({ length: 100 }).map(() => ({
+    const drops = Array.from({{ length: 100 }}).map(() => ({{
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height,
       speed: Math.random() * 4 + 2,
       length: Math.random() * 20 + 10,
       color: Math.random() > 0.5 ? 'magenta' : 'lime'
-    }));
+    }}));
 
     function drawRain() {{
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -369,7 +369,7 @@ r#"<!DOCTYPE html>
   </script>
 </body>
 </html>"#,
-cards = cards
+    cards = cards
 );
 
     Response::from_html(&html)
