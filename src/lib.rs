@@ -343,7 +343,7 @@ r#"<!DOCTYPE html>
         r: Math.random() * 2 + 1,
         dx: (Math.random() - 0.5) * 1,
         dy: (Math.random() - 0.5) * 1,
-        color: `hsl(${Math.random() * 360}, 100%, 70%)`
+        color: `hsl(${{Math.random() * 360}}, 100%, 70%)`
       }});
     }}
 
