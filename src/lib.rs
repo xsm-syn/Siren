@@ -91,11 +91,13 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
 
     let vless = |tls: bool| {
         format!(
-            "vless://{}@{}:{}?type=ws&security={}&path=/{}-{}#VLESS_{}",
+            "vless://{}@{}:{}?type=ws&security={}&host={}&sni={}&path=/{}-{}#VLESS_{}",
             uuid,
             host,
             if tls { "443" } else { "80" },
             if tls { "tls" } else { "none" },
+            host,
+            host,
             cx.data.proxy_addr,
             cx.data.proxy_port,
             if tls { "TLS" } else { "NTLS" }
@@ -104,19 +106,21 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
 
     let trojan = |tls: bool| {
         format!(
-            "trojan://{}@{}:{}?type=ws&security={}&path=/{}-{}#TROJAN_{}",
+            "trojan://{}@{}:{}?type=ws&security={}&host={}&sni={}&path=/{}-{}#TROJAN_{}",
             uuid,
             host,
             if tls { "443" } else { "80" },
             if tls { "tls" } else { "none" },
+            host,
+            host,
             cx.data.proxy_addr,
             cx.data.proxy_port,
             if tls { "TLS" } else { "NTLS" }
         )
     };
 
-    let html = format!(
-    r#"<!DOCTYPE html>
+    let html = format!(r#"
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -131,8 +135,8 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
       --copy: #0284c7;
       --copy-hover: #0369a1;
       --copied: #16a34a;
+      --border: lime;
     }}
-
     [data-theme="dark"] {{
       --bg: #0f172a;
       --card: #1e293b;
@@ -141,8 +145,8 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
       --copy: #0ea5e9;
       --copy-hover: #0284c7;
       --copied: #22c55e;
+      --border: aqua;
     }}
-
     body {{
       background: var(--bg);
       color: var(--text);
@@ -152,16 +156,15 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
       flex-direction: column;
       align-items: center;
     }}
-
     h1 {{
       margin-bottom: 2rem;
       font-size: 2.5rem;
       text-align: center;
       color: #38bdf8;
     }}
-
     .card {{
       background: var(--card);
+      border: 2px solid var(--border);
       border-radius: 1rem;
       padding: 1.5rem;
       margin-bottom: 1.5rem;
@@ -170,29 +173,23 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
       box-shadow: 0 4px 20px rgba(0,0,0,0.1);
       transition: transform 0.3s ease;
     }}
-
     .card:hover {{
       transform: translateY(-5px);
     }}
-
     .protocol {{
       font-weight: bold;
       font-size: 1.2rem;
       margin-bottom: 0.75rem;
       color: #facc15;
     }}
-
     .linkbox {{
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
       background: var(--linkbox);
       padding: 0.75rem 1rem;
       border-radius: 0.5rem;
       font-size: 0.95rem;
       overflow-x: auto;
+      white-space: nowrap;
     }}
-
     .copy {{
       cursor: pointer;
       padding: 0.5rem 1rem;
@@ -200,19 +197,18 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
       color: white;
       border: none;
       border-radius: 0.375rem;
-      margin-left: 1rem;
+      margin-top: 1rem;
       font-weight: bold;
       transition: background 0.3s ease;
+      display: block;
+      width: 100%;
     }}
-
     .copy:hover {{
       background: var(--copy-hover);
     }}
-
     .copied {{
       background: var(--copied) !important;
     }}
-
     .toggle {{
       margin-bottom: 2rem;
       background: transparent;
@@ -224,7 +220,6 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
       font-weight: bold;
       transition: 0.3s;
     }}
-
     .toggle:hover {{
       background: #38bdf8;
       color: white;
@@ -234,11 +229,46 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
 <body>
   <button class="toggle" onclick="toggleTheme()">Ganti Mode</button>
   <h1>Account Configuration</h1>
-  {cards}
+
+  <div class="card">
+    <div class="protocol">VLESS TLS</div>
+    <div class="linkbox" id="vless_tls">{vless_tls}</div>
+    <button class="copy" onclick="copyText('vless_tls', this)">Salin VLESS TLS</button>
+  </div>
+
+  <div class="card">
+    <div class="protocol">VLESS NTLS</div>
+    <div class="linkbox" id="vless_ntls">{vless_ntls}</div>
+    <button class="copy" onclick="copyText('vless_ntls', this)">Salin VLESS NTLS</button>
+  </div>
+
+  <div class="card">
+    <div class="protocol">TROJAN TLS</div>
+    <div class="linkbox" id="trojan_tls">{trojan_tls}</div>
+    <button class="copy" onclick="copyText('trojan_tls', this)">Salin TROJAN TLS</button>
+  </div>
+
+  <div class="card">
+    <div class="protocol">TROJAN NTLS</div>
+    <div class="linkbox" id="trojan_ntls">{trojan_ntls}</div>
+    <button class="copy" onclick="copyText('trojan_ntls', this)">Salin TROJAN NTLS</button>
+  </div>
+
+  <div class="card">
+    <div class="protocol">VMESS TLS</div>
+    <div class="linkbox" id="vmess_tls">{vmess_tls}</div>
+    <button class="copy" onclick="copyText('vmess_tls', this)">Salin VMESS TLS</button>
+  </div>
+
+  <div class="card">
+    <div class="protocol">VMESS NTLS</div>
+    <div class="linkbox" id="vmess_ntls">{vmess_ntls}</div>
+    <button class="copy" onclick="copyText('vmess_ntls', this)">Salin VMESS NTLS</button>
+  </div>
+
   <script>
     const html = document.documentElement;
     const savedTheme = localStorage.getItem("theme");
-
     if (savedTheme) {{
       html.setAttribute("data-theme", savedTheme);
     }} else {{
@@ -260,34 +290,20 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
         btn.textContent = 'Disalin!';
         setTimeout(() => {{
           btn.classList.remove('copied');
-          btn.textContent = 'Salin';
+          btn.textContent = btn.getAttribute("data-original") || btn.textContent;
         }}, 1500);
       }});
     }}
   </script>
 </body>
-</html>"#,
-    cards = [
-        ("VLESS TLS", vless(true), "vless_tls"),
-        ("VLESS NTLS", vless(false), "vless_ntls"),
-        ("TROJAN TLS", trojan(true), "trojan_tls"),
-        ("TROJAN NTLS", trojan(false), "trojan_ntls"),
-        ("VMESS TLS", vmess(true), "vmess_tls"),
-        ("VMESS NTLS", vmess(false), "vmess_ntls")
-    ]
-    .iter()
-    .map(|(title, link, id)| format!(
-        r#"<div class="card">
-  <div class="protocol">{}</div>
-  <div class="linkbox">
-    <span id="{}">{}</span>
-    <button class="copy" onclick="copyText('{}', this)">Salin</button>
-  </div>
-</div>"#,
-        title, id, link, id
-    ))
-    .collect::<Vec<_>>()
-    .join("\n")
+</html>
+"#,
+vless_tls = vless_tls,
+vless_ntls = vless_ntls,
+trojan_tls = trojan_tls,
+trojan_ntls = trojan_ntls,
+vmess_tls = vmess_tls,
+vmess_ntls = vmess_ntls
 );
 
     Response::from_html(&html)
