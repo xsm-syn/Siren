@@ -29,6 +29,7 @@ async fn main(req: Request, env: Env, _: Context) -> Result<Response> {
 
     Router::with_data(config)
         .on("/link", link)
+        .on_async("/link/:proxy", link_with_proxy)
         .on_async("/", |req, _| async move {
             let url = req.url()?;
             let mut new_url = url.clone();
@@ -72,8 +73,13 @@ async fn tunnel(req: Request, mut cx: RouteContext<Config>) -> Result<Response> 
 }
 
 fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
-    let host = cx.data.host.to_string();
-    let uuid = cx.data.uuid.to_string();
+    generate_link_page(cx.data.clone(), None)
+}
+
+fn generate_link_page(config: Config, path: Option<String>) -> Result<Response> {
+    let host = config.host.to_string();
+    let uuid = config.uuid.to_string();
+    let path_segment = path.unwrap_or_else(|| "proxyIP-proxyPort".to_string());
 
     let vmess = |tls: bool| {
         let config = serde_json::json!({
@@ -87,7 +93,7 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
             "net": "ws",
             "type": "none",
             "host": host,
-            "path": "/proxyIP-proxyPort",
+            "path": format!("/{}", path_segment),
             "tls": if tls { "tls" } else { "" },
             "sni": host,
             "alpn": ""
@@ -97,26 +103,28 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
 
     let vless = |tls: bool| {
         format!(
-            "vless://{}@{}:{}?type=ws&security={}&host={}&sni={}&path=/proxyIP-proxyPort#[XSM]-VLESS-{}",
+            "vless://{}@{}:{}?type=ws&security={}&host={}&sni={}&path=/{}#[XSM]-VLESS-{}",
             uuid,
             host,
             if tls { "443" } else { "80" },
             if tls { "tls" } else { "none" },
             host,
             host,
+            path_segment,
             if tls { "TLS" } else { "NTLS" }
         )
     };
 
     let trojan = |tls: bool| {
         format!(
-            "trojan://{}@{}:{}?type=ws&security={}&host={}&sni={}&path=/proxyIP-proxyPort#[XSM]-TROJAN-{}",
+            "trojan://{}@{}:{}?type=ws&security={}&host={}&sni={}&path=/{}#[XSM]-TROJAN-{}",
             uuid,
             host,
             if tls { "443" } else { "80" },
             if tls { "tls" } else { "none" },
             host,
             host,
+            path_segment,
             if tls { "TLS" } else { "NTLS" }
         )
     };
@@ -127,11 +135,12 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
         let security = if tls { "tls" } else { "none" };
         let label = if tls { "TLS" } else { "NTLS" };
         format!(
-            "ss://{}@{}:{}?encryption=none&type=ws&host={}&path=/proxyIP-proxyPort&security={}&fp=random{}#[XSM]-SS-{}",
+            "ss://{}@{}:{}?encryption=none&type=ws&host={}&path=/{}&security={}&fp=random{}#[XSM]-SS-{}",
             base64_user,
             host,
             port,
             host,
+            path_segment,
             security,
             if tls { format!("&sni={}", host) } else { "".to_string() },
             label
@@ -372,5 +381,26 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
     cards = cards
 );
 
-    Response::from_html(&html)
+    Response::ok(html).map(|resp| resp.with_headers({
+        let mut headers = Headers::new();
+        headers.set("Content-Type", "text/html; charset=utf-8").ok();
+        headers
+    }))
+}
+
+async fn link_with_proxy(_: Request, mut cx: RouteContext<Config>) -> Result<Response> {
+    if let Some(proxy) = cx.param("proxy") {
+        if PROXYIP_PATTERN.is_match(proxy) {
+            if let Some((addr, port_str)) = proxy.split_once('-') {
+                if let Ok(port) = port_str.parse::<u16>() {
+                    cx.data.proxy_addr = addr.to_string();
+                    cx.data.proxy_port = port;
+                    return generate_link_page(cx.data.clone(), Some(proxy.to_string()));
+                }
+            }
+        }
+    }
+
+    // Fallback ke default jika format salah
+    generate_link_page(cx.data.clone(), None)
 }
