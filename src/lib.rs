@@ -116,8 +116,49 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
         )
     };
 
+    let ss = |tls: bool| {
+        let base64_user = base64::engine::general_purpose::STANDARD.encode(format!("none:{}", uuid));
+        let port = if tls { "443" } else { "80" };
+        let security = if tls { "tls" } else { "none" };
+        let label = if tls { "TLS" } else { "NTLS" };
+        format!(
+            "ss://{}@{}:{}?encryption=none&type=ws&host={}&path=/proxyIP-proxyPort&security={}&fp=random{}#[XSM]-SS-{}",
+            base64_user,
+            host,
+            port,
+            host,
+            security,
+            if tls { format!("&sni={}", host) } else { "".to_string() },
+            label
+        )
+    };
+
+    let cards = vec![
+        ("VMESS TLS", vmess(true), "vmess_tls"),
+        ("VMESS NTLS", vmess(false), "vmess_ntls"),
+        ("VLESS TLS", vless(true), "vless_tls"),
+        ("VLESS NTLS", vless(false), "vless_ntls"),
+        ("TROJAN TLS", trojan(true), "trojan_tls"),
+        ("TROJAN NTLS", trojan(false), "trojan_ntls"),
+        ("SHADOWSOCKS TLS", ss(true), "ss_tls"),
+        ("SHADOWSOCKS NTLS", ss(false), "ss_ntls"),
+    ]
+    .iter()
+    .map(|(title, link, id)| format!(
+        r#"<div class="card">
+  <div class="protocol">{}</div>
+  <div class="linkbox">
+    <span id="{}">{}</span>
+  </div>
+  <button class="copy" onclick="copyText('{}', this)">Salin</button>
+</div>"#,
+        title, id, link, id
+    ))
+    .collect::<Vec<_>>()
+    .join("\n");
+
     let html = format!(
-    r#"<!DOCTYPE html>
+        r#"<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -189,7 +230,7 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
       border-radius: 0.5rem;
       font-size: 0.95rem;
       overflow-x: auto;
-      border: 2px dashed aqua;
+      border: 2px dashed lime;
     }}
 
     .copy {{
@@ -266,28 +307,8 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
   </script>
 </body>
 </html>"#,
-    cards = [
-        ("VLESS TLS", vless(true), "vless_tls"),
-        ("VLESS NTLS", vless(false), "vless_ntls"),
-        ("TROJAN TLS", trojan(true), "trojan_tls"),
-        ("TROJAN NTLS", trojan(false), "trojan_ntls"),
-        ("VMESS TLS", vmess(true), "vmess_tls"),
-        ("VMESS NTLS", vmess(false), "vmess_ntls")
-    ]
-    .iter()
-    .map(|(title, link, id)| format!(
-        r#"<div class="card">
-  <div class="protocol">{}</div>
-  <div class="linkbox">
-    <span id="{}">{}</span>
-  </div>
-  <button class="copy" onclick="copyText('{}', this)">Salin</button>
-</div>"#,
-        title, id, link, id
-    ))
-    .collect::<Vec<_>>()
-    .join("\n")
-);
+        cards = cards
+    );
 
     Response::from_html(&html)
 }
