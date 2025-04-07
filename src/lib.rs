@@ -29,6 +29,7 @@ async fn main(req: Request, env: Env, _: Context) -> Result<Response> {
 
     Router::with_data(config)
         .on("/link", link)
+        .on("/", |_, _| Response::redirect(Url::parse("/link").unwrap()))
         .on_async("/:proxyip", tunnel)
         .run(req, env)
         .await
@@ -72,7 +73,7 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
     let vmess = |tls: bool| {
         let config = serde_json::json!({
             "v": "2",
-            "ps": if tls { "VMESS TLS" } else { "VMESS NTLS" },
+            "ps": if tls { "[XSM]-VMESS-TLS" } else { "[XSM]-VMESS-NTLS" },
             "add": host,
             "port": if tls { "443" } else { "80" },
             "id": uuid,
@@ -81,7 +82,7 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
             "net": "ws",
             "type": "none",
             "host": host,
-            "path": format!("/{}-{}", cx.data.proxy_addr, cx.data.proxy_port),
+            "path": "/proxyIP-proxyPort",
             "tls": if tls { "tls" } else { "" },
             "sni": host,
             "alpn": ""
@@ -91,30 +92,26 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
 
     let vless = |tls: bool| {
         format!(
-            "vless://{}@{}:{}?type=ws&security={}&host={}&sni={}&path=/{}-{}#VLESS_{}",
+            "vless://{}@{}:{}?type=ws&security={}&host={}&sni={}&path=/proxyIP-proxyPort#[XSM]-VLESS-{}",
             uuid,
             host,
             if tls { "443" } else { "80" },
             if tls { "tls" } else { "none" },
             host,
             host,
-            cx.data.proxy_addr,
-            cx.data.proxy_port,
             if tls { "TLS" } else { "NTLS" }
         )
     };
 
     let trojan = |tls: bool| {
         format!(
-            "trojan://{}@{}:{}?type=ws&security={}&host={}&sni={}&path=/{}-{}#TROJAN_{}",
+            "trojan://{}@{}:{}?type=ws&security={}&host={}&sni={}&path=/proxyIP-proxyPort#[XSM]-TROJAN-{}",
             uuid,
             host,
             if tls { "443" } else { "80" },
             if tls { "tls" } else { "none" },
             host,
             host,
-            cx.data.proxy_addr,
-            cx.data.proxy_port,
             if tls { "TLS" } else { "NTLS" }
         )
     };
