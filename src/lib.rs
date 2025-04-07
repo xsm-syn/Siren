@@ -72,19 +72,19 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
         let host = cx.data.host.to_string();
         let uuid = cx.data.uuid.to_string();
         let config = json!({
-            "ps": "tunl",
+            "ps": "VMESS (XSM)",
             "v": "2",
-            "add": "162.159.16.149",
-            "port": "80",
+            "add": host,
+            "port": "443",
             "id": uuid,
             "aid": "0",
             "scy": "zero",
             "net": "ws",
             "type": "none",
             "host": host,
-            "path": "",
-            "tls": "",
-            "sni": "",
+            "path": "/178.128.80.43-443",
+            "tls": "tls",
+            "sni": host,
             "alpn": ""}
         );
         format!("vmess://{}", URL_SAFE.encode(config.to_string()))
@@ -93,6 +93,6 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
     Response::from_json(&Link {
         link,
         description:
-            "visit https://scanner.github1.cloud/ and replace the IP address in the configuration with a clean one".to_string()
+            "Happy surfing".to_string()
     })
 }
