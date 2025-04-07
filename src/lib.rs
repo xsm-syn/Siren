@@ -171,12 +171,12 @@ r#"<!DOCTYPE html>
   <title>XSM | SIREN | INFORMATION | ACCOUNT</title>
   <style>
     :root {{
-      --bg: #fff;
-      --card: #fff;
-      --text: #000;
-      --linkbox: #e2e8f0;
-      --copy: #0284c7;
-      --copy-hover: #0369a1;
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --text: #1f2937;
+      --linkbox: #d1d5db;
+      --copy: #3b82f6;
+      --copy-hover: #2563eb;
       --copied: #16a34a;
     }}
 
@@ -239,7 +239,7 @@ r#"<!DOCTYPE html>
       margin-bottom: 1.5rem;
       width: 100%;
       max-width: 700px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     }}
 
     .protocol {{
@@ -283,7 +283,7 @@ r#"<!DOCTYPE html>
   <canvas id="bg"></canvas>
   <button class="toggle" onclick="toggleTheme()">
     <svg id="theme-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-      <path d="M12 2a1 1 0 011 1v1a1 1 0 01-2 0V3a1 1 0 011-1zm0 18a1 1 0 011 1v1a1 1 0 01-2 0v-1a1 1 0 011-1zm10-8a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM4 12a1 1 0 01-1 1H2a1 1 0 110-2h1a1 1 0 011 1zm14.95 7.07a1 1 0 01-1.41 0l-.71-.71a1 1 0 111.41-1.41l.71.71a1 1 0 010 1.41zM6.16 6.16a1 1 0 01-1.41 0L4.04 5.45a1 1 0 111.41-1.41l.71.71a1 1 0 010 1.41zm12.02-1.41a1 1 0 00-1.41 1.41l.71.71a1 1 0 001.41-1.41l-.71-.71zM6.16 17.84a1 1 0 00-1.41-1.41l-.71.71a1 1 0 101.41 1.41l.71-.71zM12 6a6 6 0 100 12 6 6 0 000-12z"/>
+      <path d="M12 2a1 1 0 011 1v1a1 1 0 01-2 0V3a1 1 0 011-1zm0 18a1 1 0 011 1v1a1 1 0 01-2 0v-1a1 1 0 011-1zm10-8a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM4 12a1 1 0 01-1 1H2a1 1 0 110-2h1a1 1 0 011 1z"/> 
     </svg>
   </button>
   <h1>Account Configuration</h1>
@@ -296,7 +296,7 @@ r#"<!DOCTYPE html>
     function setIcon(theme) {{
       icon.innerHTML = theme === "dark"
         ? `<path d="M21.64 13.65A9 9 0 1110.35 2.36 7 7 0 0021.64 13.65z"/>`
-        : `<path d="M12 2a1 1 0 011 1v1a1 1 0 01-2 0V3a1 1 0 011-1zm0 18a1 1 0 011 1v1a1 1 0 01-2 0v-1a1 1 0 011-1zM22 12a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM4 12a1 1 0 01-1 1H2a1 1 0 110-2h1a1 1 0 011 1z"/>`;
+        : `<path d="M12 2a1 1 0 011 1v1a1 1 0 01-2 0V3a1 1 0 011-1z"/>`;
     }}
 
     if (savedTheme) {{
@@ -329,43 +329,43 @@ r#"<!DOCTYPE html>
       }});
     }}
 
-    // Background animation
+    // Rain drop animation
     const canvas = document.getElementById("bg");
     const ctx = canvas.getContext("2d");
-    canvas.width = innerWidth;
-    canvas.height = innerHeight;
-    const particles = [];
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
-    for (let i = 0; i < 100; i++) {{
-      particles.push({{
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        r: Math.random() * 2 + 1,
-        dx: (Math.random() - 0.5) * 1,
-        dy: (Math.random() - 0.5) * 1,
-        color: `hsl(${{Math.random() * 360}}, 100%, 70%)`
-      }});
-    }}
+    const drops = Array.from({ length: 100 }).map(() => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      speed: Math.random() * 4 + 2,
+      length: Math.random() * 20 + 10,
+      color: Math.random() > 0.5 ? 'magenta' : 'lime'
+    }));
 
-    function animate() {{
+    function drawRain() {{
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (let p of particles) {{
+      for (let d of drops) {{
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
-        ctx.shadowColor = p.color;
-        ctx.shadowBlur = 10;
-        ctx.fill();
-        p.x += p.dx;
-        p.y += p.dy;
-
-        if (p.x < 0 || p.x > canvas.width) p.dx *= -1;
-        if (p.y < 0 || p.y > canvas.height) p.dy *= -1;
+        ctx.strokeStyle = d.color;
+        ctx.lineWidth = 2;
+        ctx.moveTo(d.x, d.y);
+        ctx.lineTo(d.x, d.y + d.length);
+        ctx.stroke();
+        d.y += d.speed;
+        if (d.y > canvas.height) {{
+          d.y = -20;
+          d.x = Math.random() * canvas.width;
+        }}
       }}
-      requestAnimationFrame(animate);
+      requestAnimationFrame(drawRain);
     }}
 
-    animate();
+    drawRain();
+    window.addEventListener('resize', () => {{
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }});
   </script>
 </body>
 </html>"#,
