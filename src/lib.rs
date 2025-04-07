@@ -6,7 +6,7 @@ use crate::config::Config;
 use crate::proxy::*;
 
 use base64::{engine::general_purpose::URL_SAFE, Engine as _};
-use serde::Serialize;
+
 use uuid::Uuid;
 use worker::*;
 use once_cell::sync::Lazy;
@@ -390,16 +390,16 @@ fn generate_link_page(config: Config, path: Option<String>) -> Result<Response> 
 
 async fn link_with_proxy(_: Request, mut cx: RouteContext<Config>) -> Result<Response> {
     if let Some(proxy) = cx.param("proxy") {
-        if PROXYIP_PATTERN.is_match(proxy) {
-            if let Some((addr, port_str)) = proxy.split_once('-') {
-                if let Ok(port) = port_str.parse::<u16>() {
-                    cx.data.proxy_addr = addr.to_string();
-                    cx.data.proxy_port = port;
-                    return generate_link_page(cx.data.clone(), Some(proxy.to_string()));
-                }
-            }
-        }
-    }
+    // Simpan nilai proxy ke dalam variabel sementara sebelum memodifikasi cx.data
+    let addr = proxy;
+
+    // Setelah itu, modifikasi cx.data
+    cx.data.proxy_addr = addr.to_string();
+    cx.data.proxy_port = port;
+
+    // Lanjutkan ke fungsi berikutnya
+    return generate_link_page(cx.data.clone(), Some(proxy.to_string()));
+}
 
     // Fallback ke default jika format salah
     generate_link_page(cx.data.clone(), None)
