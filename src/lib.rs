@@ -116,26 +116,143 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
     };
 
     let html = format!(
-        r#"<!DOCTYPE html>
+    r#"<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Link VPN</title>
   <style>
-    body {{ background: #0f172a; color: #f8fafc; font-family: 'Segoe UI', sans-serif; padding: 2rem; }}
-    .card {{ background: #1e293b; border-radius: 0.75rem; padding: 1.5rem; margin: 1rem 0; max-width: 700px; }}
-    .protocol {{ font-weight: bold; margin-bottom: 0.5rem; }}
-    .linkbox {{ display: flex; justify-content: space-between; background: #334155; padding: 0.5rem 1rem; border-radius: 0.5rem; }}
-    .copy {{ cursor: pointer; padding: 0.25rem 0.75rem; background: #0ea5e9; color: white; border: none; border-radius: 0.25rem; transition: 0.3s; }}
-    .copy:hover {{ background: #0284c7; }}
-    .copied {{ background: #22c55e !important; }}
+    :root {{
+      --bg: #fff;
+      --card: #fff;
+      --text: #000;
+      --linkbox: #e2e8f0;
+      --copy: #0284c7;
+      --copy-hover: #0369a1;
+      --copied: #16a34a;
+    }}
+
+    [data-theme="dark"] {{
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #f8fafc;
+      --linkbox: #334155;
+      --copy: #0ea5e9;
+      --copy-hover: #0284c7;
+      --copied: #22c55e;
+    }}
+
+    body {{
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', sans-serif;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }}
+
+    h1 {{
+      margin-bottom: 2rem;
+      font-size: 2.5rem;
+      text-align: center;
+      color: #38bdf8;
+    }}
+
+    .card {{
+      background: var(--card);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      width: 100%;
+      max-width: 700px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      transition: transform 0.3s ease;
+    }}
+
+    .card:hover {{
+      transform: translateY(-5px);
+    }}
+
+    .protocol {{
+      font-weight: bold;
+      font-size: 1.2rem;
+      margin-bottom: 0.75rem;
+      color: #facc15;
+    }}
+
+    .linkbox {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--linkbox);
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      overflow-x: auto;
+    }}
+
+    .copy {{
+      cursor: pointer;
+      padding: 0.5rem 1rem;
+      background: var(--copy);
+      color: white;
+      border: none;
+      border-radius: 0.375rem;
+      margin-left: 1rem;
+      font-weight: bold;
+      transition: background 0.3s ease;
+    }}
+
+    .copy:hover {{
+      background: var(--copy-hover);
+    }}
+
+    .copied {{
+      background: var(--copied) !important;
+    }}
+
+    .toggle {{
+      margin-bottom: 2rem;
+      background: transparent;
+      border: 2px solid #38bdf8;
+      color: #38bdf8;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.3s;
+    }}
+
+    .toggle:hover {{
+      background: #38bdf8;
+      color: white;
+    }}
   </style>
 </head>
 <body>
+  <button class="toggle" onclick="toggleTheme()">Ganti Mode</button>
   <h1>Account Configuration</h1>
   {cards}
   <script>
+    const html = document.documentElement;
+    const savedTheme = localStorage.getItem("theme");
+
+    if (savedTheme) {{
+      html.setAttribute("data-theme", savedTheme);
+    }} else {{
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      html.setAttribute("data-theme", prefersDark ? "dark" : "light");
+    }}
+
+    function toggleTheme() {{
+      const current = html.getAttribute("data-theme");
+      const newTheme = current === "dark" ? "light" : "dark";
+      html.setAttribute("data-theme", newTheme);
+      localStorage.setItem("theme", newTheme);
+    }}
+
     function copyText(id, btn) {{
       const text = document.getElementById(id).textContent;
       navigator.clipboard.writeText(text).then(() => {{
@@ -150,28 +267,28 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
   </script>
 </body>
 </html>"#,
-        cards = [
-            ("VLESS TLS", vless(true), "vless_tls"),
-            ("VLESS NTLS", vless(false), "vless_ntls"),
-            ("TROJAN TLS", trojan(true), "trojan_tls"),
-            ("TROJAN NTLS", trojan(false), "trojan_ntls"),
-            ("VMESS TLS", vmess(true), "vmess_tls"),
-            ("VMESS NTLS", vmess(false), "vmess_ntls")
-        ]
-        .iter()
-        .map(|(title, link, id)| format!(
-            r#"<div class="card">
+    cards = [
+        ("VLESS TLS", vless(true), "vless_tls"),
+        ("VLESS NTLS", vless(false), "vless_ntls"),
+        ("TROJAN TLS", trojan(true), "trojan_tls"),
+        ("TROJAN NTLS", trojan(false), "trojan_ntls"),
+        ("VMESS TLS", vmess(true), "vmess_tls"),
+        ("VMESS NTLS", vmess(false), "vmess_ntls")
+    ]
+    .iter()
+    .map(|(title, link, id)| format!(
+        r#"<div class="card">
   <div class="protocol">{}</div>
   <div class="linkbox">
     <span id="{}">{}</span>
     <button class="copy" onclick="copyText('{}', this)">Salin</button>
   </div>
 </div>"#,
-            title, id, link, id
-        ))
-        .collect::<Vec<_>>()
-        .join("\n")
-    );
+        title, id, link, id
+    ))
+    .collect::<Vec<_>>()
+    .join("\n")
+);
 
     Response::from_html(&html)
 }
