@@ -29,7 +29,12 @@ async fn main(req: Request, env: Env, _: Context) -> Result<Response> {
 
     Router::with_data(config)
         .on("/link", link)
-        .on("/", |_, _| Response::redirect(Url::parse("/link").unwrap()))
+        .on_async("/", |req, _| async move {
+            let url = req.url()?;
+            let mut new_url = url.clone();
+            new_url.set_path("/link");
+            Response::redirect(new_url)
+        })
         .on_async("/:proxyip", tunnel)
         .run(req, env)
         .await
@@ -158,12 +163,12 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
     .join("\n");
 
     let html = format!(
-        r#"<!DOCTYPE html>
-<html lang="en">
+r#"<!DOCTYPE html>
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Link VPN</title>
+  <title>XSM | SIREN | INFORMATION | ACCOUNT</title>
   <style>
     :root {{
       --bg: #fff;
@@ -189,10 +194,35 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
       background: var(--bg);
       color: var(--text);
       font-family: 'Segoe UI', sans-serif;
+      margin: 0;
       padding: 2rem;
       display: flex;
       flex-direction: column;
       align-items: center;
+    }}
+
+    canvas#bg {{
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+    }}
+
+    .toggle {{
+      margin-bottom: 2rem;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 1.5rem;
+    }}
+
+    .toggle svg {{
+      width: 32px;
+      height: 32px;
+      fill: var(--text);
+      transition: transform 0.3s;
     }}
 
     h1 {{
@@ -209,12 +239,7 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
       margin-bottom: 1.5rem;
       width: 100%;
       max-width: 700px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-      transition: transform 0.3s ease;
-    }}
-
-    .card:hover {{
-      transform: translateY(-5px);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
     }}
 
     .protocol {{
@@ -252,38 +277,36 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
     .copied {{
       background: var(--copied) !important;
     }}
-
-    .toggle {{
-      margin-bottom: 2rem;
-      background: transparent;
-      border: 2px solid #38bdf8;
-      color: #38bdf8;
-      padding: 0.5rem 1rem;
-      border-radius: 0.5rem;
-      cursor: pointer;
-      font-weight: bold;
-      transition: 0.3s;
-    }}
-
-    .toggle:hover {{
-      background: #38bdf8;
-      color: white;
-    }}
   </style>
 </head>
 <body>
-  <button class="toggle" onclick="toggleTheme()">Ganti Mode</button>
+  <canvas id="bg"></canvas>
+  <button class="toggle" onclick="toggleTheme()">
+    <svg id="theme-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path d="M12 2a1 1 0 011 1v1a1 1 0 01-2 0V3a1 1 0 011-1zm0 18a1 1 0 011 1v1a1 1 0 01-2 0v-1a1 1 0 011-1zm10-8a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM4 12a1 1 0 01-1 1H2a1 1 0 110-2h1a1 1 0 011 1zm14.95 7.07a1 1 0 01-1.41 0l-.71-.71a1 1 0 111.41-1.41l.71.71a1 1 0 010 1.41zM6.16 6.16a1 1 0 01-1.41 0L4.04 5.45a1 1 0 111.41-1.41l.71.71a1 1 0 010 1.41zm12.02-1.41a1 1 0 00-1.41 1.41l.71.71a1 1 0 001.41-1.41l-.71-.71zM6.16 17.84a1 1 0 00-1.41-1.41l-.71.71a1 1 0 101.41 1.41l.71-.71zM12 6a6 6 0 100 12 6 6 0 000-12z"/>
+    </svg>
+  </button>
   <h1>Account Configuration</h1>
   {cards}
   <script>
     const html = document.documentElement;
+    const icon = document.getElementById("theme-icon");
     const savedTheme = localStorage.getItem("theme");
+
+    function setIcon(theme) {{
+      icon.innerHTML = theme === "dark"
+        ? `<path d="M21.64 13.65A9 9 0 1110.35 2.36 7 7 0 0021.64 13.65z"/>`
+        : `<path d="M12 2a1 1 0 011 1v1a1 1 0 01-2 0V3a1 1 0 011-1zm0 18a1 1 0 011 1v1a1 1 0 01-2 0v-1a1 1 0 011-1zM22 12a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM4 12a1 1 0 01-1 1H2a1 1 0 110-2h1a1 1 0 011 1z"/>`;
+    }}
 
     if (savedTheme) {{
       html.setAttribute("data-theme", savedTheme);
+      setIcon(savedTheme);
     }} else {{
       const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      html.setAttribute("data-theme", prefersDark ? "dark" : "light");
+      const theme = prefersDark ? "dark" : "light";
+      html.setAttribute("data-theme", theme);
+      setIcon(theme);
     }}
 
     function toggleTheme() {{
@@ -291,6 +314,7 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
       const newTheme = current === "dark" ? "light" : "dark";
       html.setAttribute("data-theme", newTheme);
       localStorage.setItem("theme", newTheme);
+      setIcon(newTheme);
     }}
 
     function copyText(id, btn) {{
@@ -304,11 +328,49 @@ fn link(_: Request, cx: RouteContext<Config>) -> Result<Response> {
         }}, 1500);
       }});
     }}
+
+    // Background animation
+    const canvas = document.getElementById("bg");
+    const ctx = canvas.getContext("2d");
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+    const particles = [];
+
+    for (let i = 0; i < 100; i++) {{
+      particles.push({{
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 2 + 1,
+        dx: (Math.random() - 0.5) * 1,
+        dy: (Math.random() - 0.5) * 1,
+        color: `hsl(${Math.random() * 360}, 100%, 70%)`
+      }});
+    }}
+
+    function animate() {{
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let p of particles) {{
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        p.x += p.dx;
+        p.y += p.dy;
+
+        if (p.x < 0 || p.x > canvas.width) p.dx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.dy *= -1;
+      }}
+      requestAnimationFrame(animate);
+    }}
+
+    animate();
   </script>
 </body>
 </html>"#,
-        cards = cards
-    );
+cards = cards
+);
 
     Response::from_html(&html)
 }
