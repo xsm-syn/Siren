@@ -389,8 +389,10 @@ fn generate_link_page(config: Config, path: Option<String>) -> Result<Response> 
 }
 
 async fn link_with_proxy(_: Request, mut cx: RouteContext<Config>) -> Result<Response> {
-    if let Some(proxy) = cx.param("proxy") {
-        // Misal: proxy = "123.45.67.89-443"
+    if let Some(proxy_raw) = cx.param("proxy") {
+        // Simpan proxy sebagai string baru agar tidak pinjam langsung dari cx
+        let proxy = proxy_raw.to_string();
+
         let parts: Vec<&str> = proxy.split('-').collect();
         if parts.len() == 2 {
             let addr = parts[0];
@@ -399,7 +401,7 @@ async fn link_with_proxy(_: Request, mut cx: RouteContext<Config>) -> Result<Res
             cx.data.proxy_addr = addr.to_string();
             cx.data.proxy_port = port;
 
-            return generate_link_page(cx.data.clone(), Some(proxy.to_string()));
+            return generate_link_page(cx.data.clone(), Some(proxy));
         }
     }
 
