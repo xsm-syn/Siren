@@ -390,16 +390,18 @@ fn generate_link_page(config: Config, path: Option<String>) -> Result<Response> 
 
 async fn link_with_proxy(_: Request, mut cx: RouteContext<Config>) -> Result<Response> {
     if let Some(proxy) = cx.param("proxy") {
-    // Simpan nilai proxy ke dalam variabel sementara sebelum memodifikasi cx.data
-    let addr = proxy;
+        // Misal: proxy = "123.45.67.89-443"
+        let parts: Vec<&str> = proxy.split('-').collect();
+        if parts.len() == 2 {
+            let addr = parts[0];
+            let port: u16 = parts[1].parse().unwrap_or(443); // default ke 443 jika gagal parse
 
-    // Setelah itu, modifikasi cx.data
-    cx.data.proxy_addr = addr.to_string();
-    cx.data.proxy_port = port;
+            cx.data.proxy_addr = addr.to_string();
+            cx.data.proxy_port = port;
 
-    // Lanjutkan ke fungsi berikutnya
-    return generate_link_page(cx.data.clone(), Some(proxy.to_string()));
-}
+            return generate_link_page(cx.data.clone(), Some(proxy.to_string()));
+        }
+    }
 
     // Fallback ke default jika format salah
     generate_link_page(cx.data.clone(), None)
